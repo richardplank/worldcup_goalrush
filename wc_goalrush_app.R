@@ -16,6 +16,9 @@ system('git config user.name "richardplank"')
 
 load(file = "lib/entries")
 
+# set entry masking on (1) or off
+masking <- 1
+
 # De-authorize public sheet
 gs4_deauth()
 
@@ -241,31 +244,34 @@ team_summary <- scores_all |>
 
 
 ## MASKING DATA FOR PREVIEW
-player_rows <- player_rows |> 
-  mutate(
-    TOTAL = 0,
-    across(matches("^Pot\\d+$|^DPot\\d+$"), ~ "XXX : 0"),
-    TOTGUESS = "nnn",
-    TOTDIFF = "nnn",
-    Name_Only = str_trim(str_remove(POSNAME, "^\\d+\\s+"))
-  ) |> 
-  arrange(Name_Only) |> 
-  mutate(
-    POSNAME = paste(row_number(), Name_Only)
-  ) |> 
-  select(-Name_Only)
+if (masking == 1) {
+  player_rows <- player_rows |>
+    mutate(
+      TOTAL = 0,
+      across(matches("^Pot\\d+$|^DPot\\d+$"), ~ "XXX : 0"),
+      TOTGUESS = "nnn",
+      TOTDIFF = "nnn",
+      Name_Only = str_trim(str_remove(POSNAME, "^\\d+\\s+"))
+    ) |>
+    arrange(Name_Only) |>
+    mutate(
+      POSNAME = paste(row_number(), Name_Only)
+    ) |>
+    select(-Name_Only)
+  
+  team_summary <- team_summary |>
+    mutate(
+      PCKA = as.numeric(NA),
+      GLSA = as.numeric(NA),
+      JKCNT = case_when(
+        POTN > 2 ~ as.character(NA),
+        TRUE ~ "-"
+      ),
+      PCKD = as.numeric(NA),
+      GLSD = as.numeric(NA)
+    )  
+}
 
-team_summary <- team_summary |> 
-  mutate(
-    PCKA = as.numeric(NA),
-    GLSA = as.numeric(NA),
-    JKCNT = case_when(
-      POTN > 2 ~ as.character(NA),
-      TRUE ~ "-"
-    ),
-    PCKD = as.numeric(NA),
-    GLSD = as.numeric(NA)
-  )
 
 
 
@@ -293,23 +299,21 @@ create_scenario_table <- function(player_rows) {
     short_name <- regmatches(x, regexpr("\\d{2}$", x))
     colDef(
       name = short_name, 
-      minWidth = 62,       # Changed from width=62 to minWidth=45
+      minWidth = 62,       
       align = "center"
     )
   })
   names(pot_defs) <- c(pot_cols, dpot_cols)
   
-reactable(
+  reactable(
     player_rows,
     pagination = FALSE,
     compact = TRUE,
     fullWidth = FALSE,
     theme = my_theme,
-    # Reduced from 1250px to 1050px so it fits much better into mobile viewports
     style = list(minWidth = "1250px"), 
     columnGroups = list(
       colGroup(
-        # \u3000 is a native invisible character. No HTML wrappers needed!
         name = paste0("POTS FOR >>>", strrep("\u3000", 50), "<<< POTS FOR"), 
         columns = pot_cols
       ),
@@ -317,9 +321,14 @@ reactable(
     ),
     defaultColDef = colDef(
       align = "center",
-      style = function(value) {
-        # Default fallback styles
+      style = function(value, index, name) {
+        # Start with the standard text styles
         styles <- list(fontSize = "11px", color = "#f0f0f0", fontWeight = "normal", opacity = 1)
+        
+        # FIX: Check the column name dynamically to apply the yellow right border safely
+        if (!is.null(name) && (name == "Pot12" || name == "DPot06")) {
+          styles$borderRight <- "1px solid #ffdc55"
+        }
         
         if (is.character(value)) {
           # 1. Gold-color and bold any value containing the asterisk (*)
@@ -371,20 +380,15 @@ create_team_summary_table <- function(team_summary) {
     ),
     defaultColDef = colDef(
       align = "center",
-      # 1. APPLY THE INTERNAL DASHED LINE TO EVERY COLUMN BY DEFAULT
       style = htmlwidgets::JS("
         function(rowInfo, column, tableState) {
           const index = rowInfo.index;
-          
-          // Clear default theme border styles completely
           const baseStyle = { fontSize: '10px', borderBottom: 'none' };
           
           if (index > 0) {
-            // If it's a new POT block, draw a solid white line all the way across
             if (tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
               baseStyle.borderTop = '1px solid rgba(255, 255, 255, 0.4)';
             } else {
-              // Otherwise, draw the light dashed internal line
               baseStyle.borderTop = '1px dashed rgba(255, 255, 255, 0.15)';
             }
           }
@@ -397,21 +401,16 @@ create_team_summary_table <- function(team_summary) {
       POTN = colDef(
         name = "POT", 
         width = 40,
-        # 2. OVERRIDE POT COLUMN TO WIPE OUT INTERNAL LINES COMPLETELY
         style = htmlwidgets::JS("
           function(rowInfo, column, tableState) {
             const index = rowInfo.index;
-            
             if (index === 0 || tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
               return { 
                 fontWeight: 'bold',
                 borderBottom: 'none',
-                // Keep the solid boundary line at the start of a block
                 borderTop: index > 0 ? '1px solid rgba(255, 255, 255, 0.4)' : 'none'
               }
             }
-            
-            // Wipe out internal text and ALL internal lines (dashed & solid) inside POT column
             return { 
               color: 'transparent',
               borderTop: 'none',
@@ -424,11 +423,11 @@ create_team_summary_table <- function(team_summary) {
         name = "TEAM", 
         align = "left", 
         width = 50,
-        # We need to mix the base border style with the custom alignment padding
         style = htmlwidgets::JS("
           function(rowInfo, column, tableState) {
             const index = rowInfo.index;
-            const style = { fontSize: '10px', paddingLeft: '10px', fontWeight: '500', borderBottom: 'none' };
+            // FIXED: Added borderRight here to separate TEAM from PCKA
+            const style = { fontSize: '10px', paddingLeft: '10px', fontWeight: '500', borderBottom: 'none', borderRight: '1px solid #ffdc55' };
             if (index > 0) {
               if (tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
                 style.borderTop = '1px solid rgba(255, 255, 255, 0.4)';
@@ -449,10 +448,8 @@ create_team_summary_table <- function(team_summary) {
             const index = rowInfo.index;
             const potGF = rowInfo.row['POTN'];
             const valGF = rowInfo.row['GLSA'];
-            
             const style = { fontSize: '10px', borderBottom: 'none' };
             
-            // Handle cross-column border calculations
             if (index > 0) {
               if (tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
                 style.borderTop = '1px solid rgba(255, 255, 255, 0.4)';
@@ -461,7 +458,6 @@ create_team_summary_table <- function(team_summary) {
               }
             }
             
-            // Highlighting Logic
             const valuesGF = tableState.pageRows
               .filter(function(r) { return r['POTN'] === potGF; })
               .map(function(r) { return r['GLSA']; });
@@ -480,11 +476,10 @@ create_team_summary_table <- function(team_summary) {
       JKCNT = colDef(
         name = "JOKERS", 
         width = 60,
-        # Re-attaching the yellow color while letting defaultColDef handle the lines
         style = htmlwidgets::JS("
           function(rowInfo, column, tableState) {
             const index = rowInfo.index;
-            const style = { color: '#ffdc55', fontWeight: 'bold', borderBottom: 'none' };
+            const style = { color: '#ffdc55', fontWeight: 'bold', borderBottom: 'none', borderRight: '1px solid #ffdc55' };
             if (index > 0) {
               if (tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
                 style.borderTop = '1px solid rgba(255, 255, 255, 0.4)';
@@ -505,8 +500,7 @@ create_team_summary_table <- function(team_summary) {
             const index = rowInfo.index;
             const potGLSD = rowInfo.row['POTN'];
             const valGLSD = rowInfo.row['GLSD'];
-            
-            const style = { fontSize: '10px', borderBottom: 'none' };
+            const style = { fontSize: '10px', borderBottom: 'none', borderRight: '1px solid #ffdc55' };
             
             if (index > 0) {
               if (tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
