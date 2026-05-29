@@ -269,7 +269,8 @@ if (masking == 1) {
       ),
       PCKD = as.numeric(NA),
       GLSD = as.numeric(NA)
-    )  
+    ) |> 
+    arrange(POTN, TEAMCD)
 }
 
 
@@ -720,21 +721,21 @@ for(i in 1:1){
   message(paste("Updating at", Sys.time()))
   
   
-  # try({
-  #   # The "." tells Git to look at EVERYTHING in the folder (html and lib)
-  #   system("git add .")
-  #   
-  #   # Commit only if there are changes (avoids errors if nothing changed)
-  #   system('git commit -m "Auto-update scores" --no-verify')
-  #   
-  #   # Push using our authenticated remote
-  #   system("git push origin main --quiet")
-  # }, silent = FALSE)
-  # 
-  # message(paste("Successfully updated at", Sys.time()))
-  # 
-  # # check the sheet every 60 seconds
-  # Sys.sleep(90)
+  try({
+    # The "." tells Git to look at EVERYTHING in the folder (html and lib)
+    system("git add .")
+
+    # Commit only if there are changes (avoids errors if nothing changed)
+    system('git commit -m "Auto-update scores" --no-verify')
+
+    # Push using our authenticated remote
+    system("git push origin main --quiet")
+  }, silent = FALSE)
+
+  message(paste("Successfully updated at", Sys.time()))
+
+  # check the sheet every 60 seconds
+  Sys.sleep(90)
   
 }
 
