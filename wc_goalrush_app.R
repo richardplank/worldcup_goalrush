@@ -90,7 +90,7 @@ team_goals <- bind_rows(goals_t1, goals_t2) |>
     GOALS_AGAINST = if_else(is.na(GOALS_AGAINST), 0, GOALS_AGAINST),
     GAMES = if_else(is.na(GAMES), 0, GAMES),
     STATUS = case_when(
-      str_detect(status, "GRP") == TRUE ~ paste0(status, substr(GROUP, 6, 7), ", ", as.character(GAMES), " games"),
+      str_detect(status, "Grp") == TRUE ~ paste0(status, substr(GROUP, 6, 7), ", ", as.character(GAMES), " games"),
       TRUE ~ paste0(status, ", ", as.character(GAMES), " games")
     )
   ) |> 
