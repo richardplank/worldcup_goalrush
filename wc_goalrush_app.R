@@ -669,7 +669,7 @@ page <- tags$html(
                     paste("Last Updated:", format(Sys.time(), "%H:%M %d %b %Y"))),
              tags$p(class = "fixture-status-line",
                     style = "text-align: center; font-size: 0.85em; opacity: 0.85; margin: 2px 0; font-weight: 500;",
-                    tags$span(style = "color: #ffdc55; font-weight: bold;", "Last In: "),
+                    tags$span(style = "color: #ffdc55; font-weight: bold;", "Latest Score: "),
                     last_fix
              ),
              
