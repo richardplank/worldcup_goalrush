@@ -45,6 +45,7 @@ next_fix_df <- goals_raw |>
     next_fix = paste0(team1, " v ", team2)
   )
 next_fix <- next_fix_df$next_fix
+next_fix_num <- next_fix_df$gmnum
 
 if(nrow(last_fix_df) == 0) last_fix <- "Kick Off Soon!"
 if(nrow(next_fix_df) == 0) next_fix <- "Tournament Complete"
@@ -163,9 +164,14 @@ player_rows <- player_points |>
   left_join(player_teams, by = "NAME") |> 
   arrange(desc(TOTAL), TDIFFRANK) |>
   mutate(
-    TOT_GD_RANK = (10000 * TOTAL) - TDIFFRANK,
+    TOT_GD_RANK = case_when(
+      SCREEN_NAME == "AI" ~ as.numeric(NA),
+      TRUE ~ (10000 * TOTAL) - TDIFFRANK
+    ),
     POS = min_rank(desc(TOT_GD_RANK)),
-    POSNAME = paste0(POS, " ", SCREEN_NAME),
+    POSNAME = if_else(SCREEN_NAME == "AI", 
+                      paste0("- ", SCREEN_NAME), 
+                      paste0(POS, " ", SCREEN_NAME)),
     Pot01 = paste0(TCD_P1A, SMK_P1A, P1A),
     Pot02 = paste0(TCD_P2A, SMK_P2A, P2A),
     Pot03 = paste0(substr(TCD_P3A, 1, 3), SMK_P3A, P3A, substr(TCD_P3A, 4, 4)),
@@ -186,7 +192,6 @@ player_rows <- player_points |>
     DPot06 = paste0(TCD_P6D, SMK_P6D, P6D)
   ) |> 
   select(POSNAME, TOTAL, starts_with("Pot"), starts_with("DPot"), TOTGUESS, TOTDIFF)
-  
 
 
 ## team status output
@@ -255,9 +260,18 @@ if (masking == 1) {
     ) |>
     arrange(Name_Only) |>
     mutate(
-      POSNAME = paste(row_number(), Name_Only)
+      temprank = case_when(
+        Name_Only == "- AI" ~ as.numeric(NA),
+        TRUE ~ row_number()
+      ),
+      POS = min_rank(temprank),
+      POSNAME = if_else(is.na(temprank), 
+                        "- AI", 
+                        paste0(POS, " ", Name_Only))
     ) |>
-    select(-Name_Only)
+    arrange(temprank) |> 
+    select(-Name_Only, -temprank, -POS) 
+    
   
   team_summary <- team_summary |>
     mutate(
@@ -275,12 +289,11 @@ if (masking == 1) {
 
 
 
-
 # Define the page palette
 my_theme <- reactableTheme(
   backgroundColor = "#1e1f21",       # Dark charcoal background
   borderColor = "#f0f0f0",           # Off-white lines/borders
-  stripedColor = "#2a2b2d",         # Slightly lighter dark for rows
+  stripedColor = "#2a2b2d",          # Slightly lighter dark for rows
   headerStyle = list(
     backgroundColor = "#1e1f21",
     color = "#ffdc55",               # Mustard yellow for column headers
@@ -323,24 +336,32 @@ create_scenario_table <- function(player_rows) {
     defaultColDef = colDef(
       align = "center",
       style = function(value, index, name) {
-        # Start with the standard text styles
         styles <- list(fontSize = "11px", color = "#f0f0f0", fontWeight = "normal", opacity = 1)
         
-        # FIX: Check the column name dynamically to apply the yellow right border safely
+        # Keep the yellow right dividers on Pot12 and DPot06
         if (!is.null(name) && (name == "Pot12" || name == "DPot06")) {
           styles$borderRight <- "1px solid #ffdc55"
         }
         
-        if (is.character(value)) {
-          # 1. Gold-color and bold any value containing the asterisk (*)
+        # 1. Check if this is the AI row (matches ' AI' at the end of POSNAME)
+        is_ai_row <- grepl("\\sAI$", player_rows$POSNAME[index])
+        
+        if (is_ai_row) {
+          styles$opacity <- 0.4  # Fade the entire row out slightly
+        }
+        
+        if (is_character(value)) {
+          # 2. Gold-color and bold any value containing the asterisk (*)
           if (grepl("\\*", value)) {
-            styles$color <- "#ffdc55"
-            styles$fontWeight <- "bold"
+            if (!is_ai_row) {
+              styles$color <- "#ffdc55"
+              styles$fontWeight <- "bold"
+            }
           }
           
-          # 2. Fade out any cells containing the pipe (|)
+          # 3. Extra fade out for team cells containing the pipe (|) (eliminated teams)
           if (grepl("\\|", value)) {
-            styles$opacity <- 0.4 
+            styles$opacity <- if_else(is_ai_row, 0.2, 0.4) 
           }
         }
         styles
@@ -352,12 +373,26 @@ create_scenario_table <- function(player_rows) {
           name = "RANK / PLAYER", 
           width = 140, 
           align = "left",
-          style = list(paddingLeft = "10px", fontWeight = "500", whiteSpace = "nowrap")
+          style = function(value) {
+            styles <- list(paddingLeft = "10px", fontWeight = "500", whiteSpace = "nowrap")
+            if (grepl("\\sAI$", value)) {
+              styles$opacity <- 0.4
+            }
+            styles
+          }
         ),
         TOTAL = colDef(
           name = "TOT", 
           width = 45, 
-          style = list(background = "#ffdc55", color = "#252628", fontWeight = "bold")
+          style = function(value, index) {
+            styles <- list(background = "#ffdc55", color = "#252628", fontWeight = "bold")
+            if (grepl("\\sAI$", player_rows$POSNAME[index])) {
+              styles$background <- "#444547"
+              styles$color <- "#a0a0a0"
+              styles$fontWeight <- "normal"
+            }
+            styles
+          }
         ),
         TOTGUESS = colDef(name = "TG", width = 50),
         TOTDIFF = colDef(name = "GD", width = 50)
@@ -427,7 +462,6 @@ create_team_summary_table <- function(team_summary) {
         style = htmlwidgets::JS("
           function(rowInfo, column, tableState) {
             const index = rowInfo.index;
-            // FIXED: Added borderRight here to separate TEAM from PCKA
             const style = { fontSize: '10px', paddingLeft: '10px', fontWeight: '500', borderBottom: 'none', borderRight: '1px solid #ffdc55' };
             if (index > 0) {
               if (tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
@@ -531,211 +565,307 @@ create_team_summary_table <- function(team_summary) {
   )
 }
 
-page <- tags$html(
+# Shared CSS injections for the global navigation system
+shared_styles <- HTML("
+  body { 
+    font-family: 'Montserrat', sans-serif; 
+    background-color: #1e1f21; 
+    color: #f0f0f0; 
+    padding: 20px; 
+    margin: 0;
+  }
+  .page-container { max-width: 100%; margin: 0 auto; }
+  h1 { 
+    text-align: center; color: #ffdc55; font-weight: 800; 
+    text-transform: uppercase; letter-spacing: 1px; font-size: 2em; margin-bottom: 5px;
+  }
+  .update-time { text-align: center; font-size: 0.9em; opacity: 0.8; margin-bottom: 15px; }
+  
+  /* Navigation Bar Styles */
+  .nav-bar { text-align: center; margin-bottom: 30px; }
+  .nav-btn {
+    display: inline-block; padding: 10px 20px; margin: 0 8px;
+    background-color: #2a2b2d; color: #f0f0f0; font-weight: 700;
+    text-transform: uppercase; text-decoration: none; font-size: 0.85em;
+    letter-spacing: 1px; border: 1px solid #ffdc55; border-radius: 4px;
+    transition: all 0.2s ease-in-out;
+  }
+  .nav-btn:hover { background-color: #ffdc55; color: #1e1f21; cursor: pointer; }
+  .nav-btn.active { background-color: #ffdc55; color: #1e1f21; border: 1px solid #ffdc55; }
+
+  .table-section { display: inline-block; text-align: left; max-width: 100%; margin-bottom: 20px; }
+  h2 { 
+    color: #ffdc55; border-left: 5px solid #ffdc55; padding-left: 15px; 
+    text-transform: uppercase; font-size: 1.5em; margin-top: 0; margin-bottom: 15px; font-weight: 800; display: block;
+  }
+  .rt-container { width: 100% !important; overflow-x: auto !important; display: block !important; -webkit-overflow-scrolling: touch; }
+  .rt-table { width: auto !important; flex: none !important; }
+  .rt-th, .rt-header-content { color: #ffdc55 !important; font-size: 11px !important; text-align: center !important; justify-content: center !important; }
+  .rt-column-group-header { background-color: #252628 !important; border-bottom: 1px solid #444 !important; display: flex !important; }
+  .rt-column-group-header-content { font-size: 11px !important; text-transform: uppercase; letter-spacing: 1px; color: #ffdc55 !important; display: inline-block !important; margin-right: auto !important; padding-left: 12px !important; }
+  .rt-td { white-space: nowrap !important; padding: 6px 4px !important; }
+  .footnote-container { margin-top: 40px; padding: 20px 10px; border-top: 1px solid #333; text-align: center; }
+  .footnote-line { color: #ffdc55; font-size: 0.8em; font-weight: 600; letter-spacing: 1px; margin-bottom: 8px; opacity: 0.9; }
+  .footnote-line:last-child { margin-bottom: 0; }
+  @media (max-width: 600px) {
+    body { padding: 10px; } h1 { font-size: 1.6em; } h2 { font-size: 1.3em; padding-left: 10px; }
+    .update-time { font-size: 0.8em; } .footnote-line { font-size: 0.75em; }
+  }
+")
+
+# Build standalone page 1 (live.html / Dashboard)
+page1 <- tags$html(
   tags$head(
     tags$link(href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap", rel="stylesheet"),
     tags$meta(name = "viewport", content = "width=device-width, initial-scale=1.0, shrink-to-fit=no"),
+    tags$meta(`http-equiv` = "refresh", content = "30"),
     tags$title("World Cup Goal Rush"),
+    tags$style(shared_styles),
+    
     tags$style(HTML("
-      /* Core Global Page Setup */
-      body { 
-        font-family: 'Montserrat', sans-serif; 
-        background-color: #1e1f21; 
-        color: #f0f0f0; 
-        padding: 20px; 
-        margin: 0;
+      .nav-bar { margin-bottom: 15px; }
+      .nav-btn {
+        padding: 5px 12px !important;
+        font-size: 0.72em !important;
+        margin: 0 3px !important;
       }
-      
-      .page-container {
-        max-width: 100%;
-        margin: 0 auto;
-      }
-      
-      h1 { 
-        text-align: center; 
-        color: #ffdc55; 
-        font-weight: 800; 
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-size: 2em;
-        margin-bottom: 5px;
-      }
-      
-      .update-time {
-        text-align: center; 
-        font-size: 0.9em; 
-        opacity: 0.8;
-        margin-bottom: 30px;
-      }
-
-      .table-section {
-        display: inline-block;
-        text-align: left;
-        max-width: 100%;
-        margin-bottom: 20px;
-      }
-
-      h2 { 
-        color: #ffdc55; 
-        border-left: 5px solid #ffdc55; 
-        padding-left: 15px; 
-        text-transform: uppercase; 
-        font-size: 1.5em; 
-        margin-top: 0;
-        margin-bottom: 15px;
-        font-weight: 800;
-        display: block;
-      }
-
-      .rt-container {
-        width: 100% !important;
-        overflow-x: auto !important;
-        display: block !important;
-        -webkit-overflow-scrolling: touch;
-      }
-
-      .rt-table {
-        width: auto !important;
-        flex: none !important;
-      }
-
-      .rt-th, .rt-header-content {
-        color: #ffdc55 !important;
-        font-size: 11px !important;
-        text-align: center !important;
-        justify-content: center !important;
-      }
-
-      /* THE FLEXBOX OVERRIDE TRICK */
-      .rt-column-group-header {
-        background-color: #252628 !important;
-        border-bottom: 1px solid #444 !important;
-        display: flex !important;
-      }
-
-      /* Bulletproof override: forces all extra space to the right */
-      .rt-column-group-header-content {
-        font-size: 11px !important;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #ffdc55 !important;
-        
-        display: inline-block !important;
-        margin-right: auto !important; /* Shoves everything to the left */
-        padding-left: 12px !important;  /* Controls the indent edge */
-      }
-
-      .rt-td {
-        white-space: nowrap !important;
-        padding: 6px 4px !important;
-      }
-
-      /* Updated Footnote Container Layout */
-      .footnote-container {
-        margin-top: 40px; 
-        padding: 20px 10px; 
-        border-top: 1px solid #333;
-        text-align: center;
-      }
-
-      .footnote-line {
-        color: #ffdc55; 
-        font-size: 0.8em; 
-        font-weight: 600; 
-        letter-spacing: 1px;
-        margin-bottom: 8px; /* Gap between the stacked lines */
-        opacity: 0.9;
-      }
-      
-      .footnote-line:last-child {
-        margin-bottom: 0;
-      }
-
-      @media (max-width: 600px) {
-        body { padding: 10px; }
-        h1 { font-size: 1.6em; }
-        h2 { font-size: 1.3em; padding-left: 10px; }
-        .update-time { font-size: 0.8em; }
-        .footnote-line { font-size: 0.75em; }
+      @media (max-width: 480px) {
+        .nav-btn {
+          padding: 4px 8px !important;
+          font-size: 0.68em !important;
+        }
       }
     "))
   ),
   tags$body(
     tags$div(class = "page-container",
-             
              tags$h1("WC26 Goal Rush"),
-             tags$p(class = "update-time",
-                    style = "text-align: center; font-size: 0.85em; opacity: 0.85; margin: 2px 0; font-weight: 500;",
+             tags$p(class = "update-time", style = "margin: 2px 0 12px 0; font-weight: 500;",
                     paste("Last Updated:", format(Sys.time(), "%H:%M %d %b %Y"))),
-             tags$p(class = "fixture-status-line",
-                    style = "text-align: center; font-size: 0.85em; opacity: 0.85; margin: 2px 0; font-weight: 500;",
-                    tags$span(style = "color: #ffdc55; font-weight: bold;", "Latest Score: "),
-                    last_fix
-             ),
              
-             tags$p(class = "fixture-status-line",
-                    style = "text-align: center; font-size: 0.85em; opacity: 0.85; margin: 2px 0; font-weight: 500; margin-bottom: 25px;",
-                    tags$span(style = "color: #ffdc55; font-weight: bold;", "Next Up: "),
-                    next_fix
-             ),
+             # Links to move between the two dashboards
+             tags$div(class = "nav-bar",
+                      tags$a(href = "live.html", class = "nav-btn active", "Standings"),
+                      tags$a(href = "fixtures.html", class = "nav-btn", "Fixtures & Selections")),
+             
+             tags$p(class = "fixture-status-line", style = "text-align: center; font-size: 0.85em; opacity: 0.85; margin: 2px 0; font-weight: 500;",
+                    tags$span(style = "color: #ffdc55; font-weight: bold;", "Latest Score: "), last_fix),
+             tags$p(class = "fixture-status-line", style = "text-align: center; font-size: 0.85em; opacity: 0.85; margin: 2px 0; font-weight: 500; margin-bottom: 25px;",
+                    tags$span(style = "color: #ffdc55; font-weight: bold;", "Next Up: "), next_fix),
              
              tags$div(style = "width: 100%; overflow: visible;",
                       tags$div(class = "table-section",
                                tags$h2("Standings"),
-                               create_scenario_table(player_rows)
-                      )
-             ),
-             
-             # Cleanly Stacked Footnotes Box
-             tags$div(class = "footnote-container",
-                      tags$div(class = "footnote-line", "* = SELECTED JOKER"),
-                      tags$div(class = "footnote-line", "TG = TOTAL PREDICTED GOALS"),
-                      tags$div(class = "footnote-line", "GD = DIFFERENCE VS ACTUAL TOTAL"),
-                      
-                      # The new faded country footnote
-                      tags$div(class = "footnote-line", 
-                               style = "opacity: 0.45; font-weight: normal; font-size: 0.75em; margin-top: 12px;",
-                               "| = COUNTRY ELIMINATED FROM WORLD CUP")
-             ),
-             
-             # NEW: Your secondary summary table block
-             tags$div(style = "width: 100%; overflow: visible; margin-top: 30px;",
-                      tags$div(class = "table-section",
-                               tags$h2("Team Summary"),
-                               create_team_summary_table(team_summary)
-                      )
-             )
-    )
+                               create_scenario_table(player_rows)))),
+    
+    tags$div(class = "footnote-container",
+             tags$div(class = "footnote-line", "* = SELECTED JOKER"),
+             tags$div(class = "footnote-line", "TG = TOTAL PREDICTED GOALS"),
+             tags$div(class = "footnote-line", "GD = DIFFERENCE VS ACTUAL TOTAL"),
+             tags$div(class = "footnote-line", style = "opacity: 0.45; font-weight: normal; font-size: 0.75em; margin-top: 12px;",
+                      "| = COUNTRY ELIMINATED FROM WORLD CUP")),
+    
+    tags$div(style = "width: 100%; overflow: visible; margin-top: 30px;",
+             tags$div(class = "table-section",
+                      tags$h2("Team Summary"),
+                      create_team_summary_table(team_summary)))
   )
 )
 
-htmltools::save_html(page, file = "live.html", libdir = "lib")
+htmltools::save_html(page1, file = "live.html", libdir = "lib")
 
 
+#### CREATE 2nd HTML TO SHOW FIXTURES AND SELECTORS
+# 1. Clean and prepare the entries data
 
+prepared_entries <- entries |>
+  left_join(screen_name, by = "NAME") |> 
+  mutate(DISPLAY_NAME = if_else(JKMULT > 1, paste0("*", SCREEN_NAME, "*"), SCREEN_NAME)) |>
+  mutate(POT_TYPE = if_else(str_detect(POTCD, "A$"), "A", "D")) |>
+  arrange(TEAM, POT_TYPE, SCREEN_NAME) |>
+  group_by(TEAM, POT_TYPE) |>
+  summarise(
+    # Changed from a comma to an HTML line break for clean vertical stacking
+    ENTRANTS_LIST = paste(DISPLAY_NAME, collapse = "<br>"),
+    .groups = "drop"
+  ) |>
+  pivot_wider(
+    names_from = POT_TYPE, 
+    values_from = ENTRANTS_LIST,
+    names_prefix = "PICKED_"
+  )
 
+# 2. Build on the goals_raw structure using left_joins
+goals_with_entrants <- goals_raw |>
+  left_join(prepared_entries, by = c("team1" = "TEAM")) |>
+  rename(TEAM1A = PICKED_A, TEAM1D = PICKED_D) |>
+  left_join(prepared_entries, by = c("team2" = "TEAM")) |>
+  rename(TEAM2A = PICKED_A, TEAM2D = PICKED_D) |>
+  mutate(across(c(TEAM1A, TEAM1D, TEAM2A, TEAM2D), ~ replace_na(.x, ""))) |> 
+  left_join(team_goals, by = c("team1" = "TEAM")) |> 
+  rename(TEAM1CD = TEAMCD) |>
+  left_join(team_goals, by = c("team2" = "TEAM")) |> 
+  rename(TEAM2CD = TEAMCD) |> 
+  mutate(
+    FIXTURE = case_when(
+      is.na(goals1) | is.na(goals2) ~ paste0(TEAM1CD, " v ", TEAM2CD),
+      TRUE ~ paste0(TEAM1CD, " ", goals1, "-", goals2, " ", TEAM2CD),
+    ),
+    keep_fix = case_when(
+      next_fix_num <= 3 & gmnum <= 5 ~ "Y",
+      gmnum >= next_fix_num - 2 & gmnum <= next_fix_num - 3 ~ "Y",
+      TRUE ~ "N"
+    )
+  ) |> 
+  filter(keep_fix == "Y") |> 
+  select(TEAM1D, TEAM1A, FIXTURE, TEAM2A, TEAM2D)
 
-
-#while(TRUE){
-for(i in 1:1){
-  message(paste("Updating at", Sys.time()))
-  
-  
-  try({
-    # The "." tells Git to look at EVERYTHING in the folder (html and lib)
-    system("git add .")
-
-    # Commit only if there are changes (avoids errors if nothing changed)
-    system('git commit -m "Auto-update scores" --no-verify')
-
-    # Push using our authenticated remote
-    system("git push origin main --quiet")
-  }, silent = FALSE)
-
-  message(paste("Successfully updated at", Sys.time()))
-
-  # check the sheet every 60 seconds
-  Sys.sleep(90)
-  
+## MASKING DATA FOR PREVIEW
+if (masking == 1) {
+  goals_with_entrants <- goals_with_entrants |>
+    mutate(
+      TEAM1D = case_when(
+        FIXTURE %in% c("MEX v SAF", "USA v PAR") ~ "Player Z",
+        TRUE ~ as.character(NA)
+      ),
+      TEAM1A = case_when(
+        FIXTURE %in% c("MEX v SAF", "KOR v CZE") ~ "Player Y",
+        FIXTURE %in% c("CAN v BOS", "USA v PAR") ~ "Player X",
+        TRUE ~ as.character(NA)
+      ),
+      TEAM2A = case_when(
+        FIXTURE %in% c("MEX v SAF", "KOR v CZE") ~ "Player X",
+        FIXTURE %in% c("CAN v BOS") ~ "Player Y</br>Player Z",
+        TRUE ~ as.character(NA)
+      ),
+      TEAM2D = case_when(
+        FIXTURE %in% c("USA v PAR", "QAT v SWI") ~ "Player Y",
+        TRUE ~ as.character(NA)
+      )
+    ) 
 }
 
+
+# Functional component for rendering the new fixtures table inside reactable
+create_fixtures_table <- function(goals_with_entrants) {
+  
+  # Custom R cell renderer to cleanly parse out asterisks, colorize Jokers, and handle line breaks
+  joker_html_renderer <- function(value) {
+    if (value == "" || is.na(value)) return("")
+    
+    # Use regex to find text inside asterisks, replace with bold gold styling tags
+    formatted_value <- gsub("\\*([^*]+)\\*", "<b style='color: #ffdc55; font-weight: bold;'>\\1</b>", value)
+    htmltools::HTML(formatted_value)
+  }
+  
+  reactable(
+    goals_with_entrants,
+    pagination = FALSE,
+    compact = TRUE,
+    fullWidth = TRUE,             # Changed to TRUE to scale gracefully on responsive viewports
+    theme = my_theme,
+    style = list(maxWidth = "100%", minWidth = "600px"), # Reduced min-width drastically for mobile accessibility
+    columnGroups = list(
+      colGroup(name = "TEAM 1", columns = c("TEAM1D", "TEAM1A")),
+      colGroup(name = "TEAM 2", columns = c("TEAM2A", "TEAM2D"))
+    ),
+    defaultColDef = colDef(
+      align = "left",
+      html = TRUE,                # Enables rendering of custom <br> updates and HTML tags
+      cell = joker_html_renderer, # Injects our styling logic across the entry lists
+      style = list(fontSize = "10px", color = "#f0f0f0", padding = "2px 1px")
+    ),
+    columns = list(
+      # Scaled widths down for mobile screens while prioritizing vertically stacked lists
+      TEAM1D = colDef(name = "DEF", width = 80, align = "center"),
+      TEAM1A = colDef(
+        name = "ATT", 
+        width = 80, 
+        align = "center",
+        style = list(fontSize = "10px", color = "#f0f0f0", borderRight = "1px solid #ffdc55", padding = "2px 1px")
+      ),
+      FIXTURE = colDef(
+        name = "MATCH", 
+        width = 80, 
+        align = "center",
+        html = FALSE, # Standard text parsing for raw code structures
+        cell = function(value) value, 
+        style = list(fontWeight = "bold", color = "#ffdc55", background = "#252628", borderRight = "1px solid #ffdc55", fontSize = "10px")
+      ),
+      TEAM2A = colDef(name = "ATT", width = 80, align = "center"),
+      TEAM2D = colDef(name = "DEF", width = 80, align = "center")
+    )
+  )
+}
+
+# Build standalone page 2 (fixtures.html)
+page2 <- tags$html(
+  tags$head(
+    tags$link(href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap", rel="stylesheet"),
+    tags$meta(name = "viewport", content = "width=device-width, initial-scale=1.0, shrink-to-fit=no"),
+    tags$meta(`http-equiv` = "refresh", content = "30"),
+    tags$title("World Cup Goal Rush - Fixtures"),
+    tags$style(shared_styles),
+    
+    # SAFE OVERRIDE: This applies specifically to the buttons without touching shared_styles
+    tags$style(HTML("
+      .nav-bar { margin-bottom: 15px; }
+      .nav-btn {
+        padding: 5px 12px !important;
+        font-size: 0.72em !important;
+        margin: 0 3px !important;
+      }
+      @media (max-width: 480px) {
+        .nav-btn {
+          padding: 4px 8px !important;
+          font-size: 0.68em !important;
+        }
+      }
+    "))
+  ),
+  tags$body(
+    tags$div(class = "page-container",
+             tags$h1("WC26 Goal Rush"),
+             tags$p(class = "update-time", style = "margin: 2px 0 12px 0; font-weight: 500;",
+                    paste("Last Updated:", format(Sys.time(), "%H:%M %d %b %Y"))),
+             
+             # Active links configuration for Navigation mapping
+             tags$div(class = "nav-bar",
+                      tags$a(href = "live.html", class = "nav-btn", "Back to Standings"),
+                      tags$a(href = "fixtures.html", class = "nav-btn active", "Fixtures & Selections")),
+             
+             tags$div(style = "width: 100%; overflow: visible;",
+                      tags$div(class = "table-section",
+                               tags$h2("Fixtures & Selections"),
+                               create_fixtures_table(goals_with_entrants)))),
+    
+    tags$div(class = "footnote-container",
+             tags$div(class = "footnote-line", style = "color: #ffdc55;", "GOLD = JOKER"))
+  )
+)
+
+htmltools::save_html(page2, file = "fixtures.html", libdir = "lib")
+
+
+# Continuous deployment looping protocol (active)
+# while(TRUE){
+#   for(i in 1:1){
+#     message(paste("Updating at", Sys.time()))
+#     
+#     try({
+#       # Staging all newly saved layout modules 
+#       system("git add .")
+#       
+#       # Execution block for auto commits safely ignoring empty tree states
+#       system('git commit -m "Auto-update scores" --no-verify')
+#       
+#       # Final operational execution sequence pushing data models into origin pipeline
+#       system("git push origin main --quiet")
+#     }, silent = FALSE)
+#     
+#     message(paste("Successfully updated at", Sys.time()))
+#     
+#     # check the sheet every 90 seconds
+#     Sys.sleep(90)
+#   }
+# }

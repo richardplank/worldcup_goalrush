@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<style>body{background-color:white;}</style>
+<script src="lib/core-js-2.5.3/shim.min.js"></script>
+<script src="lib/react-18.2.0/react.min.js"></script>
+<script src="lib/react-18.2.0/react-dom.min.js"></script>
+<script src="lib/reactwidget-2.0.0/react-tools.js"></script>
+<link href="lib/htmltools-fill-0.5.9/fill.css" rel="stylesheet" />
+<script src="lib/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<link href="lib/reactable-0.4.5/reactable.css" rel="stylesheet" />
+<script src="lib/reactable-binding-0.4.5/reactable.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&amp;display=swap" rel="stylesheet"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no"/>
+  <meta http-equiv="refresh" content="30"/>
+  <title>World Cup Goal Rush - Fixtures</title>
+  <style>
+  body { 
+    font-family: 'Montserrat', sans-serif; 
+    background-color: #1e1f21; 
+    color: #f0f0f0; 
+    padding: 20px; 
+    margin: 0;
+  }
+  .page-container { max-width: 100%; margin: 0 auto; }
+  h1 { 
+    text-align: center; color: #ffdc55; font-weight: 800; 
+    text-transform: uppercase; letter-spacing: 1px; font-size: 2em; margin-bottom: 5px;
+  }
+  .update-time { text-align: center; font-size: 0.9em; opacity: 0.8; margin-bottom: 15px; }
+  
+  /* Navigation Bar Styles */
+  .nav-bar { text-align: center; margin-bottom: 30px; }
+  .nav-btn {
+    display: inline-block; padding: 10px 20px; margin: 0 8px;
+    background-color: #2a2b2d; color: #f0f0f0; font-weight: 700;
+    text-transform: uppercase; text-decoration: none; font-size: 0.85em;
+    letter-spacing: 1px; border: 1px solid #ffdc55; border-radius: 4px;
+    transition: all 0.2s ease-in-out;
+  }
+  .nav-btn:hover { background-color: #ffdc55; color: #1e1f21; cursor: pointer; }
+  .nav-btn.active { background-color: #ffdc55; color: #1e1f21; border: 1px solid #ffdc55; }
+
+  .table-section { display: inline-block; text-align: left; max-width: 100%; margin-bottom: 20px; }
+  h2 { 
+    color: #ffdc55; border-left: 5px solid #ffdc55; padding-left: 15px; 
+    text-transform: uppercase; font-size: 1.5em; margin-top: 0; margin-bottom: 15px; font-weight: 800; display: block;
+  }
+  .rt-container { width: 100% !important; overflow-x: auto !important; display: block !important; -webkit-overflow-scrolling: touch; }
+  .rt-table { width: auto !important; flex: none !important; }
+  .rt-th, .rt-header-content { color: #ffdc55 !important; font-size: 11px !important; text-align: center !important; justify-content: center !important; }
+  .rt-column-group-header { background-color: #252628 !important; border-bottom: 1px solid #444 !important; display: flex !important; }
+  .rt-column-group-header-content { font-size: 11px !important; text-transform: uppercase; letter-spacing: 1px; color: #ffdc55 !important; display: inline-block !important; margin-right: auto !important; padding-left: 12px !important; }
+  .rt-td { white-space: nowrap !important; padding: 6px 4px !important; }
+  .footnote-container { margin-top: 40px; padding: 20px 10px; border-top: 1px solid #333; text-align: center; }
+  .footnote-line { color: #ffdc55; font-size: 0.8em; font-weight: 600; letter-spacing: 1px; margin-bottom: 8px; opacity: 0.9; }
+  .footnote-line:last-child { margin-bottom: 0; }
+  @media (max-width: 600px) {
+    body { padding: 10px; } h1 { font-size: 1.6em; } h2 { font-size: 1.3em; padding-left: 10px; }
+    .update-time { font-size: 0.8em; } .footnote-line { font-size: 0.75em; }
+  }
+</style>
+  <style>
+      .nav-bar { margin-bottom: 15px; }
+      .nav-btn {
+        padding: 5px 12px !important;
+        font-size: 0.72em !important;
+        margin: 0 3px !important;
+      }
+      @media (max-width: 480px) {
+        .nav-btn {
+          padding: 4px 8px !important;
+          font-size: 0.68em !important;
+        }
+      }
+    </style>
+</head>
+<html>
+  <body>
+    <div class="page-container">
+      <h1>WC26 Goal Rush</h1>
+      <p class="update-time" style="margin: 2px 0 12px 0; font-weight: 500;">Last Updated: 18:49 06 Jun 2026</p>
+      <div class="nav-bar">
+        <a href="live.html" class="nav-btn">Back to Standings</a>
+        <a href="fixtures.html" class="nav-btn active">Fixtures &amp; Selections</a>
+      </div>
+      <div style="width: 100%; overflow: visible;">
+        <div class="table-section">
+          <h2>Fixtures &amp; Selections</h2>
+          <div class="reactable html-widget html-fill-item" id="htmlwidget-78a32f9916d36f0d116c" style="width:auto;height:auto;"></div>
+          <script type="application/json" data-for="htmlwidget-78a32f9916d36f0d116c">{"x":{"tag":{"name":"Reactable","attribs":{"data":{"TEAM1D":["Player Z",null,null,"Player Z",null],"TEAM1A":["Player Y","Player Y","Player X","Player X",null],"FIXTURE":["MEX v SAF","KOR v CZE","CAN v BOS","USA v PAR","QAT v SWI"],"TEAM2A":["Player X","Player X","Player Y<\/br>Player Z",null,null],"TEAM2D":[null,null,null,"Player Y","Player Y"]},"columns":[{"id":"TEAM1D","name":"DEF","type":"character","cell":["Player Z","","","Player Z",""],"html":true,"align":"center","style":{"fontSize":"10px","color":"#f0f0f0","padding":"2px 1px"},"width":80},{"id":"TEAM1A","name":"ATT","type":"character","cell":["Player Y","Player Y","Player X","Player X",""],"html":true,"align":"center","style":{"fontSize":"10px","color":"#f0f0f0","borderRight":"1px solid #ffdc55","padding":"2px 1px"},"width":80},{"id":"FIXTURE","name":"MATCH","type":"character","cell":["MEX v SAF","KOR v CZE","CAN v BOS","USA v PAR","QAT v SWI"],"html":false,"align":"center","style":{"fontWeight":"bold","color":"#ffdc55","background":"#252628","borderRight":"1px solid #ffdc55","fontSize":"10px"},"width":80},{"id":"TEAM2A","name":"ATT","type":"character","cell":["Player X","Player X","Player Y<\/br>Player Z","",""],"html":true,"align":"center","style":{"fontSize":"10px","color":"#f0f0f0","padding":"2px 1px"},"width":80},{"id":"TEAM2D","name":"DEF","type":"character","cell":["","","","Player Y","Player Y"],"html":true,"align":"center","style":{"fontSize":"10px","color":"#f0f0f0","padding":"2px 1px"},"width":80}],"columnGroups":[{"name":"TEAM 1","columns":["TEAM1D","TEAM1A"]},{"name":"TEAM 2","columns":["TEAM2A","TEAM2D"]}],"pagination":false,"compact":true,"style":{"maxWidth":"100%","minWidth":"600px"},"theme":{"backgroundColor":"#1e1f21","borderColor":"#f0f0f0","stripedColor":"#2a2b2d","headerStyle":{"backgroundColor":"#1e1f21","color":"#ffdc55","borderBottom":"2px solid #f0f0f0"},"cellStyle":{"color":"#f0f0f0","borderBottom":"1px solid #f0f0f0"}},"dataKey":"4dabedfac2425532b27f8d06438ca210"},"children":[]},"class":"reactR_markup"},"evals":[],"jsHooks":[]}</script>
+        </div>
+      </div>
+    </div>
+    <div class="footnote-container">
+      <div class="footnote-line" style="color: #ffdc55;">GOLD = JOKER</div>
+    </div>
+  </body>
+</html>
+</html>
