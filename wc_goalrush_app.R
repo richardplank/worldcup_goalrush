@@ -730,12 +730,13 @@ if (masking == 1) {
       ),
       TEAM1A = case_when(
         FIXTURE %in% c("MEX v SAF", "KOR v CZE") ~ "Player Y",
+        FIXTURE %in% c("KOR v CZE") ~ "*Player Y*",
         FIXTURE %in% c("CAN v BOS", "USA v PAR") ~ "Player X",
         TRUE ~ as.character(NA)
       ),
       TEAM2A = case_when(
         FIXTURE %in% c("MEX v SAF", "KOR v CZE") ~ "Player X",
-        FIXTURE %in% c("CAN v BOS") ~ "Player Y</br>Player Z",
+        FIXTURE %in% c("CAN v BOS") ~ "Player Y</br>*Player Z*",
         TRUE ~ as.character(NA)
       ),
       TEAM2D = case_when(
@@ -848,24 +849,24 @@ htmltools::save_html(page2, file = "fixtures.html", libdir = "lib")
 
 
 # Continuous deployment looping protocol (active)
-# while(TRUE){
-#   for(i in 1:1){
-#     message(paste("Updating at", Sys.time()))
-#     
-#     try({
-#       # Staging all newly saved layout modules 
-#       system("git add .")
-#       
-#       # Execution block for auto commits safely ignoring empty tree states
-#       system('git commit -m "Auto-update scores" --no-verify')
-#       
-#       # Final operational execution sequence pushing data models into origin pipeline
-#       system("git push origin main --quiet")
-#     }, silent = FALSE)
-#     
-#     message(paste("Successfully updated at", Sys.time()))
-#     
-#     # check the sheet every 90 seconds
-#     Sys.sleep(90)
-#   }
-# }
+#while(TRUE){
+  for(i in 1:1){
+    message(paste("Updating at", Sys.time()))
+
+    try({
+      # Staging all newly saved layout modules
+      system("git add .")
+
+      # Execution block for auto commits safely ignoring empty tree states
+      system('git commit -m "Auto-update scores" --no-verify')
+
+      # Final operational execution sequence pushing data models into origin pipeline
+      system("git push origin main --quiet")
+    }, silent = FALSE)
+
+    message(paste("Successfully updated at", Sys.time()))
+
+    # check the sheet every 90 seconds
+    Sys.sleep(90)
+  }
+#}
