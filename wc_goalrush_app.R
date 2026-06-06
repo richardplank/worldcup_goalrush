@@ -729,7 +729,7 @@ if (masking == 1) {
         TRUE ~ as.character(NA)
       ),
       TEAM1A = case_when(
-        FIXTURE %in% c("MEX v SAF", "KOR v CZE") ~ "Player Y",
+        FIXTURE %in% c("MEX v SAF") ~ "Player Y",
         FIXTURE %in% c("KOR v CZE") ~ "*Player Y*",
         FIXTURE %in% c("CAN v BOS", "USA v PAR") ~ "Player X",
         TRUE ~ as.character(NA)
