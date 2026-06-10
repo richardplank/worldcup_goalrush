@@ -251,6 +251,7 @@ team_summary <- scores_all |>
 ## MASKING DATA FOR PREVIEW
 if (masking == 1) {
   player_rows <- player_rows |>
+    filter(POSNAME != "- AI") |> 
     mutate(
       TOTAL = 0,
       across(matches("^Pot\\d+$|^DPot\\d+$"), ~ "XXX : 0"),
@@ -850,23 +851,23 @@ htmltools::save_html(page2, file = "fixtures.html", libdir = "lib")
 
 # Continuous deployment looping protocol (active)
 #while(TRUE){
-  # for(i in 1:1){
-  #   message(paste("Updating at", Sys.time()))
-  # 
-  #   try({
-  #     # Staging all newly saved layout modules
-  #     system("git add .")
-  # 
-  #     # Execution block for auto commits safely ignoring empty tree states
-  #     system('git commit -m "Auto-update scores" --no-verify')
-  # 
-  #     # Final operational execution sequence pushing data models into origin pipeline
-  #     system("git push origin main --quiet")
-  #   }, silent = FALSE)
-  # 
-  #   message(paste("Successfully updated at", Sys.time()))
-  # 
-  #   # check the sheet every 90 seconds
-  #   Sys.sleep(90)
-  # }
+  for(i in 1:1){
+    message(paste("Updating at", Sys.time()))
+
+    try({
+      # Staging all newly saved layout modules
+      system("git add .")
+
+      # Execution block for auto commits safely ignoring empty tree states
+      system('git commit -m "Auto-update scores" --no-verify')
+
+      # Final operational execution sequence pushing data models into origin pipeline
+      system("git push origin main --quiet")
+    }, silent = FALSE)
+
+    message(paste("Successfully updated at", Sys.time()))
+
+    # check the sheet every 90 seconds
+    Sys.sleep(90)
+  }
 #}
