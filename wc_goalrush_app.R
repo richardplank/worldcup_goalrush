@@ -311,7 +311,7 @@ create_scenario_table <- function(player_rows) {
   dpot_cols <- grep("^DPot\\d{2}", names(player_rows), value = TRUE)
   
   pot_defs <- lapply(c(pot_cols, dpot_cols), function(x) {
-    short_name <- regmatches(x, regexpr("\\d{2}$", x))
+    short_name <- regmatches(x, regexpr("\\d{1}$", x))
     colDef(
       name = short_name, 
       minWidth = 62,       
