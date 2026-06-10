@@ -767,8 +767,8 @@ create_fixtures_table <- function(goals_with_entrants) {
     theme = my_theme,
     style = list(maxWidth = "100%", minWidth = "600px"), # Reduced min-width drastically for mobile accessibility
     columnGroups = list(
-      colGroup(name = "TEAM 1", columns = c("TEAM1D", "TEAM1A")),
-      colGroup(name = "TEAM 2", columns = c("TEAM2A", "TEAM2D"))
+      colGroup(name = "<<<", columns = c("TEAM1D", "TEAM1A")),
+      colGroup(name = ">>>", columns = c("TEAM2A", "TEAM2D"))
     ),
     defaultColDef = colDef(
       align = "left",
@@ -778,9 +778,9 @@ create_fixtures_table <- function(goals_with_entrants) {
     ),
     columns = list(
       # Scaled widths down for mobile screens while prioritizing vertically stacked lists
-      TEAM1D = colDef(name = "DEF", width = 80, align = "center"),
+      TEAM1D = colDef(name = "DEFENCE", width = 80, align = "center"),
       TEAM1A = colDef(
-        name = "ATT", 
+        name = "ATTACK", 
         width = 80, 
         align = "center",
         style = list(fontSize = "10px", color = "#f0f0f0", borderRight = "1px solid #ffdc55", padding = "2px 1px")
@@ -793,8 +793,8 @@ create_fixtures_table <- function(goals_with_entrants) {
         cell = function(value) value, 
         style = list(fontWeight = "bold", color = "#ffdc55", background = "#252628", borderRight = "1px solid #ffdc55", fontSize = "10px")
       ),
-      TEAM2A = colDef(name = "ATT", width = 80, align = "center"),
-      TEAM2D = colDef(name = "DEF", width = 80, align = "center")
+      TEAM2A = colDef(name = "ATTACK", width = 80, align = "center"),
+      TEAM2D = colDef(name = "DEFENCE", width = 80, align = "center")
     )
   )
 }
@@ -850,23 +850,23 @@ htmltools::save_html(page2, file = "fixtures.html", libdir = "lib")
 
 # Continuous deployment looping protocol (active)
 #while(TRUE){
-  for(i in 1:1){
-    message(paste("Updating at", Sys.time()))
-
-    try({
-      # Staging all newly saved layout modules
-      system("git add .")
-
-      # Execution block for auto commits safely ignoring empty tree states
-      system('git commit -m "Auto-update scores" --no-verify')
-
-      # Final operational execution sequence pushing data models into origin pipeline
-      system("git push origin main --quiet")
-    }, silent = FALSE)
-
-    message(paste("Successfully updated at", Sys.time()))
-
-    # check the sheet every 90 seconds
-    Sys.sleep(90)
-  }
+  # for(i in 1:1){
+  #   message(paste("Updating at", Sys.time()))
+  # 
+  #   try({
+  #     # Staging all newly saved layout modules
+  #     system("git add .")
+  # 
+  #     # Execution block for auto commits safely ignoring empty tree states
+  #     system('git commit -m "Auto-update scores" --no-verify')
+  # 
+  #     # Final operational execution sequence pushing data models into origin pipeline
+  #     system("git push origin main --quiet")
+  #   }, silent = FALSE)
+  # 
+  #   message(paste("Successfully updated at", Sys.time()))
+  # 
+  #   # check the sheet every 90 seconds
+  #   Sys.sleep(90)
+  # }
 #}
