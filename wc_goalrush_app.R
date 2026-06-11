@@ -25,6 +25,10 @@ gs4_deauth()
 # sheet URLs
 goals_sheet_url <- "https://docs.google.com/spreadsheets/d/1YYGvhWviudeDMu4l6dW-VqgGIOYFeefHHo5FQeVK36U/edit?gid=0#gid=0"
 
+# Continuous deployment looping protocol (active)
+for(i in 1:60){
+  message(paste("Updating at", Sys.time()))
+
 goals_raw <- read_sheet(goals_sheet_url, sheet = "fixtures")
 team_status <- read_sheet(goals_sheet_url, sheet = "status")
 screen_name <- read_sheet(goals_sheet_url, sheet = "entries", range = "A:B")
@@ -954,9 +958,7 @@ page2 <- tags$html(
 htmltools::save_html(page2, file = "fixtures.html", libdir = "lib")
 
 
-# Continuous deployment looping protocol (active)
-for(i in 1:60){
-  message(paste("Updating at", Sys.time()))
+
 
   try({
     # Staging all newly saved layout modules
