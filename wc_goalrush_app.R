@@ -17,7 +17,7 @@ system('git config user.name "richardplank"')
 load(file = "lib/entries")
 
 # set entry masking on (1) or off
-masking <- 1
+masking <- 0
 
 # De-authorize public sheet
 gs4_deauth()
@@ -98,6 +98,9 @@ team_goals <- bind_rows(goals_t1, goals_t2) |>
   select(TEAM, TEAMCD, POTN, GAMES, GOALS_FOR, GOALS_AGAINST, STATUS)
 
 ALLGOALS = sum(team_goals$GOALS_FOR)
+TOTGAMES = sum(team_goals$GAMES) / 2
+GAMES_LEFT = 104 - TOTGAMES
+PROJ_GOALS = if_else(TOTGAMES == 0, 0, round((ALLGOALS / TOTGAMES) * 104))
 
 ### Calculate scores
 
@@ -109,7 +112,7 @@ scores <- entries |>
                    "P7A", "P8A", "P9A", "P10A", "P11A", "P12A") ~ GOALS_FOR * JKMULT,
       POTCD %in% c("P1D", "P2D", "P3D", "P4D", "P5D", "P6D") ~ 0 - GOALS_AGAINST
     ),
-    TOTDIFF = TOTGUESS - ALLGOALS,
+    TOTDIFF = TOTGUESS - PROJ_GOALS,
     TDIFFRANK = abs(TOTDIFF)
   )
 
@@ -200,7 +203,7 @@ pots_for_list     <- paste0("P", 1:12, "A") # Generates P1A, P2A... P12A
 pots_against_list <- paste0("P", 1:6, "D")  # Generates P1D, P2D... P6D
 
 team_summary <- scores_all |>
-  filter(POTCD != "TOTAL") |> 
+  filter(POTCD != "TOTAL" & NAME != "AI") |> 
   group_by(TEAM) |>
   summarise(
     PACNT = coalesce(sum(POTCD %in% pots_for_list, na.rm = TRUE), 0),
@@ -352,11 +355,17 @@ create_scenario_table <- function(player_rows) {
         }
         
         if (is_character(value)) {
-          # 2. Gold-color and bold any value containing the asterisk (*)
+          # 2. Yellow/Gold-color and bold any value containing the asterisk (*)
           if (grepl("\\*", value)) {
-            if (!is_ai_row) {
+            styles$fontWeight <- "bold"
+            
+            if (is_ai_row) {
+              # Faded/muted yellow for the AI row specifically
+              # #bfa440 is a muted/darker gold, or you could use #ffdc5580 for 50% transparency
+              styles$color <- "#bfa440" 
+            } else {
+              # Normal bright yellow for non-AI rows
               styles$color <- "#ffdc55"
-              styles$fontWeight <- "bold"
             }
           }
           
@@ -429,6 +438,11 @@ create_team_summary_table <- function(team_summary) {
               baseStyle.borderTop = '1px dashed rgba(255, 255, 255, 0.15)';
             }
           }
+          
+          if (rowInfo.row['STATUS'] && rowInfo.row['STATUS'].includes('Out')) {
+            baseStyle.opacity = 0.4;
+          }
+          
           return baseStyle;
         }
       ")
@@ -464,6 +478,7 @@ create_team_summary_table <- function(team_summary) {
           function(rowInfo, column, tableState) {
             const index = rowInfo.index;
             const style = { fontSize: '10px', paddingLeft: '10px', fontWeight: '500', borderBottom: 'none', borderRight: '1px solid #ffdc55' };
+            
             if (index > 0) {
               if (tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
                 style.borderTop = '1px solid rgba(255, 255, 255, 0.4)';
@@ -471,11 +486,37 @@ create_team_summary_table <- function(team_summary) {
                 style.borderTop = '1px dashed rgba(255, 255, 255, 0.15)';
               }
             }
+            
+            if (rowInfo.row['STATUS'] && rowInfo.row['STATUS'].includes('Out')) {
+              style.opacity = 0.4;
+            }
             return style;
           }
         ")
       ),
-      PCKA = colDef(name = "PICKS", width = 50),
+      PCKA = colDef(
+        name = "PICKS", 
+        width = 50,
+        style = htmlwidgets::JS("
+          function(rowInfo, column, tableState) {
+            const index = rowInfo.index;
+            const style = { fontSize: '10px', borderBottom: 'none' };
+            
+            if (index > 0) {
+              if (tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
+                style.borderTop = '1px solid rgba(255, 255, 255, 0.4)';
+              } else {
+                style.borderTop = '1px dashed rgba(255, 255, 255, 0.15)';
+              }
+            }
+            
+            if (rowInfo.row['STATUS'] && rowInfo.row['STATUS'].includes('Out')) {
+              style.opacity = 0.4;
+            }
+            return style;
+          }
+        ")
+      ),
       GLSA = colDef(
         name = "GF", 
         width = 30,
@@ -484,6 +525,7 @@ create_team_summary_table <- function(team_summary) {
             const index = rowInfo.index;
             const potGF = rowInfo.row['POTN'];
             const valGF = rowInfo.row['GLSA'];
+            const isOut = rowInfo.row['STATUS'] && rowInfo.row['STATUS'].includes('Out');
             const style = { fontSize: '10px', borderBottom: 'none' };
             
             if (index > 0) {
@@ -500,10 +542,14 @@ create_team_summary_table <- function(team_summary) {
               
             const maxGF = Math.max.apply(null, valuesGF);
             
-            if (valGF === maxGF && valuesGF.some(function(v) { return v > 0; })) { 
+            if (valGF === maxGF && valuesGF.some(function(v) { return v > 0; }) && !isOut) { 
               style.backgroundColor = '#ffdc55';
               style.fontWeight = 'bold';
               style.color = '#333';
+            }
+            
+            if (isOut) {
+              style.opacity = 0.4;
             }
             return style;
           }
@@ -515,7 +561,10 @@ create_team_summary_table <- function(team_summary) {
         style = htmlwidgets::JS("
           function(rowInfo, column, tableState) {
             const index = rowInfo.index;
-            const style = { color: '#ffdc55', fontWeight: 'bold', borderBottom: 'none', borderRight: '1px solid #ffdc55' };
+            const isOut = rowInfo.row['STATUS'] && rowInfo.row['STATUS'].includes('Out');
+            const jokerColor = isOut ? '#bfa440' : '#ffdc55';
+            const style = { color: jokerColor, fontWeight: 'bold', borderBottom: 'none', borderRight: '1px solid #ffdc55' };
+            
             if (index > 0) {
               if (tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
                 style.borderTop = '1px solid rgba(255, 255, 255, 0.4)';
@@ -523,11 +572,37 @@ create_team_summary_table <- function(team_summary) {
                 style.borderTop = '1px dashed rgba(255, 255, 255, 0.15)';
               }
             }
+            
+            if (isOut) {
+              style.opacity = 0.4;
+            }
             return style;
           }
         ")
       ),
-      PCKD = colDef(name = "PICKS", width = 50),
+      PCKD = colDef(
+        name = "PICKS", 
+        width = 50,
+        style = htmlwidgets::JS("
+          function(rowInfo, column, tableState) {
+            const index = rowInfo.index;
+            const style = { fontSize: '10px', borderBottom: 'none' };
+            
+            if (index > 0) {
+              if (tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
+                style.borderTop = '1px solid rgba(255, 255, 255, 0.4)';
+              } else {
+                style.borderTop = '1px dashed rgba(255, 255, 255, 0.15)';
+              }
+            }
+            
+            if (rowInfo.row['STATUS'] && rowInfo.row['STATUS'].includes('Out')) {
+              style.opacity = 0.4;
+            }
+            return style;
+          }
+        ")
+      ),
       GLSD = colDef(
         name = "GA",
         width = 30,
@@ -536,6 +611,7 @@ create_team_summary_table <- function(team_summary) {
             const index = rowInfo.index;
             const potGLSD = rowInfo.row['POTN'];
             const valGLSD = rowInfo.row['GLSD'];
+            const isOut = rowInfo.row['STATUS'] && rowInfo.row['STATUS'].includes('Out');
             const style = { fontSize: '10px', borderBottom: 'none', borderRight: '1px solid #ffdc55' };
             
             if (index > 0) {
@@ -552,16 +628,42 @@ create_team_summary_table <- function(team_summary) {
               
             const maxGLSD = Math.max.apply(null, valuesGLSD);
             
-            if (valGLSD === maxGLSD) { 
+            if (valGLSD === maxGLSD && !isOut) { 
               style.backgroundColor = '#ffdc55';
               style.fontWeight = 'bold';
               style.color = '#333';
+            }
+            
+            if (isOut) {
+              style.opacity = 0.4;
             }
             return style;
           }
         ")
       ),
-      STATUS = colDef(name = "STATUS", width = 150)
+      STATUS = colDef(
+        name = "STATUS", 
+        width = 150,
+        style = htmlwidgets::JS("
+          function(rowInfo, column, tableState) {
+            const index = rowInfo.index;
+            const style = { fontSize: '10px', borderBottom: 'none' };
+            
+            if (index > 0) {
+              if (tableState.pageRows[index - 1]['POTN'] !== rowInfo.row['POTN']) {
+                style.borderTop = '1px solid rgba(255, 255, 255, 0.4)';
+              } else {
+                style.borderTop = '1px dashed rgba(255, 255, 255, 0.15)';
+              }
+            }
+            
+            if (rowInfo.row['STATUS'] && rowInfo.row['STATUS'].includes('Out')) {
+              style.opacity = 0.4;
+            }
+            return style;
+          }
+        ")
+      )
     )
   )
 }
@@ -662,14 +764,17 @@ page1 <- tags$html(
     tags$div(class = "footnote-container",
              tags$div(class = "footnote-line", "* = SELECTED JOKER"),
              tags$div(class = "footnote-line", "TG = TOTAL PREDICTED GOALS"),
-             tags$div(class = "footnote-line", "GD = DIFFERENCE VS ACTUAL TOTAL"),
+             tags$div(class = "footnote-line", paste0("GD = DIFFERENCE VS PROJECTED ACTUAL TOTAL (", PROJ_GOALS, ")")),
              tags$div(class = "footnote-line", style = "opacity: 0.45; font-weight: normal; font-size: 0.75em; margin-top: 12px;",
                       "| = COUNTRY ELIMINATED FROM WORLD CUP")),
     
     tags$div(style = "width: 100%; overflow: visible; margin-top: 30px;",
              tags$div(class = "table-section",
                       tags$h2("Team Summary"),
-                      create_team_summary_table(team_summary)))
+                      create_team_summary_table(team_summary))),
+    
+    tags$div(class = "footnote-container",
+             tags$div(class = "footnote-line", "GOLD SQUARE = BEST PICK(S) IN POT"))
   )
 )
 
@@ -714,7 +819,7 @@ goals_with_entrants <- goals_raw |>
     ),
     keep_fix = case_when(
       next_fix_num <= 3 & gmnum <= 5 ~ "Y",
-      gmnum >= next_fix_num - 2 & gmnum <= next_fix_num - 3 ~ "Y",
+      gmnum >= next_fix_num - 2 & gmnum <= next_fix_num + 3 ~ "Y",
       TRUE ~ "N"
     )
   ) |> 
@@ -788,7 +893,7 @@ create_fixtures_table <- function(goals_with_entrants) {
       ),
       FIXTURE = colDef(
         name = "MATCH", 
-        width = 80, 
+        width = 90, 
         align = "center",
         html = FALSE, # Standard text parsing for raw code structures
         cell = function(value) value, 
@@ -850,24 +955,22 @@ htmltools::save_html(page2, file = "fixtures.html", libdir = "lib")
 
 
 # Continuous deployment looping protocol (active)
-#while(TRUE){
-  for(i in 1:1){
-    message(paste("Updating at", Sys.time()))
+for(i in 1:1){
+  message(paste("Updating at", Sys.time()))
 
-    try({
-      # Staging all newly saved layout modules
-      system("git add .")
+  try({
+    # Staging all newly saved layout modules
+    system("git add .")
 
-      # Execution block for auto commits safely ignoring empty tree states
-      system('git commit -m "Auto-update scores" --no-verify')
+    # Execution block for auto commits safely ignoring empty tree states
+    system('git commit -m "Auto-update scores" --no-verify')
 
-      # Final operational execution sequence pushing data models into origin pipeline
-      system("git push origin main --quiet")
-    }, silent = FALSE)
+    # Final operational execution sequence pushing data models into origin pipeline
+    system("git push origin main --quiet")
+  }, silent = FALSE)
 
-    message(paste("Successfully updated at", Sys.time()))
+  message(paste("Successfully updated at", Sys.time()))
 
-    # check the sheet every 90 seconds
-    Sys.sleep(90)
-  }
-#}
+  # check the sheet every 90 seconds
+  Sys.sleep(120)
+}
