@@ -955,7 +955,7 @@ htmltools::save_html(page2, file = "fixtures.html", libdir = "lib")
 
 
 # Continuous deployment looping protocol (active)
-for(i in 1:1){
+for(i in 1:60){
   message(paste("Updating at", Sys.time()))
 
   try({
