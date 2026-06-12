@@ -18,6 +18,8 @@ load(file = "lib/entries")
 
 # set entry masking on (1) or off
 masking <- 0
+runs <- 1
+sleepytime <- if_else(runs == 1, 1, 120)
 
 # De-authorize public sheet
 gs4_deauth()
@@ -26,7 +28,7 @@ gs4_deauth()
 goals_sheet_url <- "https://docs.google.com/spreadsheets/d/1YYGvhWviudeDMu4l6dW-VqgGIOYFeefHHo5FQeVK36U/edit?gid=0#gid=0"
 
 # Continuous deployment looping protocol (active)
-for(i in 1:60){
+for(i in 1:runs){
   message(paste("Updating at", Sys.time()))
 
 goals_raw <- read_sheet(goals_sheet_url, sheet = "fixtures")
@@ -974,5 +976,5 @@ htmltools::save_html(page2, file = "fixtures.html", libdir = "lib")
   message(paste("Successfully updated at", Sys.time()))
 
   # check the sheet every 90 seconds
-  Sys.sleep(120)
+  Sys.sleep(sleepytime)
 }
