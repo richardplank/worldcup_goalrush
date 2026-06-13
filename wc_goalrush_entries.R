@@ -53,7 +53,7 @@ entries <- read_sheet(entry_sheet_url) |>
   # flag joker
   mutate(
     JKMULT = case_when(
-      POTCD == paste0("P",substr(JKPOT, 5, 5),"A") ~ case_when(
+      POTCD == paste0("P",substr(JKPOT, 5, 6),"A") ~ case_when(
         JKPOT %in% c("Pot 3", "Pot 4") ~ 2,
         JKPOT %in% c("Pot 5", "Pot 6") ~ 3,
         JKPOT %in% c("Pot 7", "Pot 8") ~ 4,
