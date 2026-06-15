@@ -629,16 +629,21 @@ create_team_summary_table <- function(team_summary) {
               }
             }
             
+            // Extract and clean values: Filter out null, undefined, or empty string data 
             const valuesGLSD = tableState.pageRows
               .filter(function(r) { return r['POTN'] === potGLSD; })
-              .map(function(r) { return r['GLSD']; });
+              .map(function(r) { return r['GLSD']; })
+              .filter(function(v) { return v !== null && v !== undefined && v !== ''; });
               
-            const maxGLSD = Math.max.apply(null, valuesGLSD);
-            
-            if (valGLSD === maxGLSD && !isOut) { 
-              style.backgroundColor = '#ffdc55';
-              style.fontWeight = 'bold';
-              style.color = '#333';
+            // Safely find the maximum negative value
+            if (valuesGLSD.length > 0) {
+              const maxGLSD = Math.max.apply(null, valuesGLSD);
+              
+              if (valGLSD === maxGLSD && !isOut) { 
+                style.backgroundColor = '#ffdc55';
+                style.fontWeight = 'bold';
+                style.color = '#333';
+              }
             }
             
             if (isOut) {
