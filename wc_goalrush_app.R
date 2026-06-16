@@ -19,7 +19,7 @@ load(file = "lib/entries")
 # set entry masking on (1) or off
 masking <- 0
 runs <- 20
-#runs <- 1
+runs <- 1
 sleepytime <- if_else(runs == 1, 1, 120)
 
 # De-authorize public sheet
@@ -127,7 +127,11 @@ totscores <- scores |>
   arrange(NAME, POTCD) |> 
   group_by(NAME) |> 
   mutate(
-    TOTPOINTS = cumsum(POINTS)
+    TOTPOINTS = cumsum(POINTS),
+    TOT_GPA = cumsum(if_else(POTCD %in% c("P1A", "P2A", "P3A", "P4A", "P5A", "P6A",
+                              "P7A", "P8A", "P9A", "P10A", "P11A", "P12A"), GAMES, 0)),
+    TOT_GPD = cumsum(if_else(POTCD %in% c("P1D", "P2D", "P3D", "P4D", "P5D", "P6D"), GAMES, 0)),
+    TOT_GM_PLD = paste0(TOT_GPA, "/", TOT_GPD)
   ) |> 
   slice(n()) |> 
   ungroup() |> 
@@ -140,8 +144,12 @@ totscores <- scores |>
   select(-GAMES, -starts_with("GOALS"), -STATUS, -POINTS) |> 
   rename(POINTS = TOTPOINTS)
 
+tot_gm_pld <- totscores |> 
+  select(NAME, TOT_GM_PLD)
 
-scores_all <- bind_rows(scores, totscores)
+scores_all <- bind_rows(scores, 
+                        totscores |> 
+                          select(-TOT_GPA, -TOT_GPD, -TOT_GM_PLD))
 
 player_points <- scores_all |> 
   pivot_wider(
@@ -172,6 +180,7 @@ player_teams <- scores_all |>
 player_rows <- player_points |> 
   left_join(screen_name, by = "NAME") |> 
   left_join(player_teams, by = "NAME") |> 
+  left_join(tot_gm_pld, by = "NAME") |> 
   arrange(desc(TOTAL), TDIFFRANK) |>
   mutate(
     TOT_GD_RANK = case_when(
@@ -201,7 +210,7 @@ player_rows <- player_points |>
     DPot05 = paste0(TCD_P5D, SMK_P5D, P5D),
     DPot06 = paste0(TCD_P6D, SMK_P6D, P6D)
   ) |> 
-  select(POSNAME, TOTAL, starts_with("Pot"), starts_with("DPot"), TOTGUESS, TOTDIFF)
+  select(POSNAME, TOTAL, TOT_GM_PLD, starts_with("Pot"), starts_with("DPot"), TOTGUESS, TOTDIFF)
 
 
 ## team status output
@@ -411,6 +420,7 @@ create_scenario_table <- function(player_rows) {
             styles
           }
         ),
+        TOT_GM_PLD = colDef(name = "GP", width = 50),
         TOTGUESS = colDef(name = "TG", width = 50),
         TOTDIFF = colDef(name = "GD", width = 50)
       ),
@@ -775,6 +785,7 @@ page1 <- tags$html(
     
     tags$div(class = "footnote-container",
              tags$div(class = "footnote-line", "* = SELECTED JOKER"),
+             tags$div(class = "footnote-line", "GP = GAMES PLAYED (ATT/DEF)"),
              tags$div(class = "footnote-line", "TG = TOTAL PREDICTED GOALS"),
              tags$div(class = "footnote-line", paste0("GD = DIFFERENCE VS PROJECTED ACTUAL TOTAL (", PROJ_GOALS, ")")),
              tags$div(class = "footnote-line", style = "opacity: 0.45; font-weight: normal; font-size: 0.75em; margin-top: 12px;",
