@@ -19,7 +19,7 @@ load(file = "lib/entries")
 # set entry masking on (1) or off
 masking <- 0
 runs <- 40
-#runs <- 1
+runs <- 1
 sleepytime <- if_else(runs == 1, 1, 120)
 
 # De-authorize public sheet
