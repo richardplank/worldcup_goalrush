@@ -177,6 +177,9 @@ player_teams <- scores_all |>
     names_from = POTCD
   )
 
+pot_col_names <- sprintf("Pot%02d", 1:12)
+dpot_col_names <- sprintf("DPot%02d", 1:6)
+
 player_rows <- player_points |> 
   left_join(screen_name, by = "NAME") |> 
   left_join(player_teams, by = "NAME") |> 
@@ -208,7 +211,10 @@ player_rows <- player_points |>
     DPot03 = paste0(TCD_P3D, SMK_P3D, P3D),
     DPot04 = paste0(TCD_P4D, SMK_P4D, P4D),
     DPot05 = paste0(TCD_P5D, SMK_P5D, P5D),
-    DPot06 = paste0(TCD_P6D, SMK_P6D, P6D)
+    DPot06 = paste0(TCD_P6D, SMK_P6D, P6D),
+    POTS_LEFT = rowSums(across(all_of(pot_col_names), ~ str_detect(., ":")), na.rm = TRUE),
+    DPOTS_LEFT = rowSums(across(all_of(dpot_col_names), ~ str_detect(., ":")), na.rm = TRUE),
+    TEAMS_LEFT = paste0(POTS_LEFT, "/", DPOTS_LEFT)
   ) |> 
   select(POSNAME, TOTAL, TOT_GM_PLD, starts_with("Pot"), starts_with("DPot"), TOTGUESS, TOTDIFF)
 
