@@ -212,9 +212,9 @@ player_rows <- player_points |>
     DPot04 = paste0(TCD_P4D, SMK_P4D, P4D),
     DPot05 = paste0(TCD_P5D, SMK_P5D, P5D),
     DPot06 = paste0(TCD_P6D, SMK_P6D, P6D),
-    POTS_LEFT = rowSums(across(all_of(pot_col_names), ~ str_detect(., ":")), na.rm = TRUE),
-    DPOTS_LEFT = rowSums(across(all_of(dpot_col_names), ~ str_detect(., ":")), na.rm = TRUE),
-    TEAMS_LEFT = paste0(POTS_LEFT, "/", DPOTS_LEFT)
+    REM_POTS = rowSums(across(all_of(pot_col_names), ~ str_detect(., ":")), na.rm = TRUE),
+    REM_DPOTS = rowSums(across(all_of(dpot_col_names), ~ str_detect(., ":")), na.rm = TRUE),
+    TEAMS_LEFT = paste0(REM_POTS, "/", REM_DPOTS)
   ) |> 
   select(POSNAME, TOTAL, TOT_GM_PLD, starts_with("Pot"), starts_with("DPot"), TOTGUESS, TOTDIFF)
 
