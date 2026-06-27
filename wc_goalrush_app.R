@@ -565,8 +565,9 @@ create_team_summary_table <- function(team_summary) {
               
             const maxGF = Math.max.apply(null, valuesGF);
             
-            if (valGF === maxGF && valuesGF.some(function(v) { return v > 0; }) && !isOut) { 
-              style.backgroundColor = '#ffdc55';
+            // Modified logic: Allow highlighting even if out, using a duller gold color
+            if (valGF === maxGF && valuesGF.some(function(v) { return v > 0; })) { 
+              style.backgroundColor = isOut ? '#bfa440' : '#ffdc55';
               style.fontWeight = 'bold';
               style.color = '#333';
             }
@@ -645,18 +646,17 @@ create_team_summary_table <- function(team_summary) {
               }
             }
             
-            // Extract and clean values: Filter out null, undefined, or empty string data 
             const valuesGLSD = tableState.pageRows
               .filter(function(r) { return r['POTN'] === potGLSD; })
               .map(function(r) { return r['GLSD']; })
               .filter(function(v) { return v !== null && v !== undefined && v !== ''; });
               
-            // Safely find the maximum negative value
             if (valuesGLSD.length > 0) {
               const maxGLSD = Math.max.apply(null, valuesGLSD);
               
-              if (valGLSD === maxGLSD && !isOut) { 
-                style.backgroundColor = '#ffdc55';
+              // Modified logic: Allow highlighting even if out, using a duller gold color
+              if (valGLSD === maxGLSD) { 
+                style.backgroundColor = isOut ? '#bfa440' : '#ffdc55';
                 style.fontWeight = 'bold';
                 style.color = '#333';
               }
