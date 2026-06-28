@@ -214,9 +214,11 @@ player_rows <- player_points |>
     DPot06 = paste0(TCD_P6D, SMK_P6D, P6D),
     REM_POTS = rowSums(across(all_of(pot_col_names), ~ str_detect(., ":")), na.rm = TRUE),
     REM_DPOTS = rowSums(across(all_of(dpot_col_names), ~ str_detect(., ":")), na.rm = TRUE),
-    TEAMS_LEFT = paste0(REM_POTS, "/", REM_DPOTS)
+    TEAMS_LEFT = paste0(REM_POTS, "/", REM_DPOTS),
+    # switch player progress from games played to teams left at KO stage
+    PLAYER_PROGRESS = TOT_GM_PLD
   ) |> 
-  select(POSNAME, TOTAL, TOT_GM_PLD, starts_with("Pot"), starts_with("DPot"), TOTGUESS, TOTDIFF)
+  select(POSNAME, TOTAL, PLAYER_PROGRESS, starts_with("Pot"), starts_with("DPot"), TOTGUESS, TOTDIFF)
 
 
 ## team status output
@@ -426,7 +428,7 @@ create_scenario_table <- function(player_rows) {
             styles
           }
         ),
-        TOT_GM_PLD = colDef(name = "GP", width = 50),
+        PLAYER_PROGRESS = colDef(name = "GP", width = 50),
         TOTGUESS = colDef(name = "TG", width = 50),
         TOTDIFF = colDef(name = "GD", width = 50)
       ),
