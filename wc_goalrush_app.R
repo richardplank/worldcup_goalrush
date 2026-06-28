@@ -216,7 +216,7 @@ player_rows <- player_points |>
     REM_DPOTS = rowSums(across(all_of(dpot_col_names), ~ str_detect(., ":")), na.rm = TRUE),
     TEAMS_LEFT = paste0(REM_POTS, "/", REM_DPOTS),
     # switch player progress from games played to teams left at KO stage
-    PLAYER_PROGRESS = TOT_GM_PLD
+    PLAYER_PROGRESS = TEAMS_LEFT
   ) |> 
   select(POSNAME, TOTAL, PLAYER_PROGRESS, starts_with("Pot"), starts_with("DPot"), TOTGUESS, TOTDIFF)
 
@@ -428,7 +428,7 @@ create_scenario_table <- function(player_rows) {
             styles
           }
         ),
-        PLAYER_PROGRESS = colDef(name = "GP", width = 50),
+        PLAYER_PROGRESS = colDef(name = "TL", width = 50),
         TOTGUESS = colDef(name = "TG", width = 50),
         TOTDIFF = colDef(name = "GD", width = 50)
       ),
@@ -793,7 +793,7 @@ page1 <- tags$html(
     
     tags$div(class = "footnote-container",
              tags$div(class = "footnote-line", "* = SELECTED JOKER"),
-             tags$div(class = "footnote-line", "GP = GAMES PLAYED (ATT/DEF)"),
+             tags$div(class = "footnote-line", "TL = TEAMS LEFT IN WC (ATT/DEF)"),
              tags$div(class = "footnote-line", "TG = TOTAL PREDICTED GOALS"),
              tags$div(class = "footnote-line", paste0("GD = DIFFERENCE VS PROJECTED ACTUAL TOTAL (", PROJ_GOALS, ")")),
              tags$div(class = "footnote-line", style = "opacity: 0.45; font-weight: normal; font-size: 0.75em; margin-top: 12px;",
