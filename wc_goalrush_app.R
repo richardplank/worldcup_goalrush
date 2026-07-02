@@ -774,7 +774,7 @@ page1 <- tags$html(
     tags$div(class = "page-container",
              tags$h1("WC26 Goal Rush"),
              tags$p(class = "update-time", style = "margin: 2px 0 12px 0; font-weight: 500;",
-                    paste("Last Updated:", format(Sys.time(), "%H:%M %d %b %Y"))),
+                    paste("Last Updated:", format(Sys.time(), "%H:%M %d %b %Y"), " - AWAY TILL MONDAY")),
              
              # Links to move between the two dashboards
              tags$div(class = "nav-bar",
@@ -965,7 +965,7 @@ page2 <- tags$html(
     tags$div(class = "page-container",
              tags$h1("WC26 Goal Rush"),
              tags$p(class = "update-time", style = "margin: 2px 0 12px 0; font-weight: 500;",
-                    paste("Last Updated:", format(Sys.time(), "%H:%M %d %b %Y"))),
+                    paste("Last Updated:", format(Sys.time(), "%H:%M %d %b %Y"), " - AWAY TILL MONDAY")),
              
              # Active links configuration for Navigation mapping
              tags$div(class = "nav-bar",
