@@ -28,6 +28,9 @@ gs4_deauth()
 # sheet URLs
 goals_sheet_url <- "https://docs.google.com/spreadsheets/d/1YYGvhWviudeDMu4l6dW-VqgGIOYFeefHHo5FQeVK36U/edit?gid=0#gid=0"
 
+# total scheduled games
+SCHED_GAMES <- 104
+
 # Continuous deployment looping protocol (active)
 for(i in 1:runs){
   message(paste("Updating at", Sys.time()))
@@ -53,6 +56,9 @@ next_fix_df <- goals_raw |>
   )
 next_fix <- next_fix_df$next_fix
 next_fix_num <- next_fix_df$gmnum
+if (nrow(next_fix_df) == 0) {
+  next_fix_num <- SCHED_GAMES + 1
+}
 
 if(nrow(last_fix_df) == 0) last_fix <- "Kick Off Soon!"
 if(nrow(next_fix_df) == 0) next_fix <- "Tournament Complete"
@@ -104,10 +110,11 @@ team_goals <- bind_rows(goals_t1, goals_t2) |>
   ) |> 
   select(TEAM, TEAMCD, POTN, GAMES, GOALS_FOR, GOALS_AGAINST, STATUS)
 
+
 ALLGOALS = sum(team_goals$GOALS_FOR)
 TOTGAMES = sum(team_goals$GAMES) / 2
-GAMES_LEFT = 104 - TOTGAMES
-PROJ_GOALS = if_else(TOTGAMES == 0, 0, round((ALLGOALS / TOTGAMES) * 104))
+GAMES_LEFT = SCHED_GAMES - TOTGAMES
+PROJ_GOALS = if_else(TOTGAMES == 0, 0, round((ALLGOALS / TOTGAMES) * SCHED_GAMES))
 
 ### Calculate scores
 
